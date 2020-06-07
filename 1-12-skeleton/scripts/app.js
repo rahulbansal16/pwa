@@ -41,6 +41,8 @@
     var label = selected.textContent;
     app.getForecast(key, label);
     app.selectedCities.push({key: key, label: label});
+    console.log("The selected Cities are", app.selectedCities);
+    app.storeUserPreferences();
     app.toggleAddDialog(false);
   });
 
@@ -63,6 +65,12 @@
     } else {
       app.addDialog.classList.remove('dialog-container--visible');
     }
+  };
+
+  app.storeUserPreferences = function() {
+    window.localforage.setItem('selectedCities', app.selectedCities).then(()=>{
+      console.log("Values saved");
+    }).catch( err => console.log("Error saving the values",err));
   };
 
   // Updates a weather card with the latest weather forecast. If the card
@@ -132,6 +140,9 @@
       if (request.readyState === XMLHttpRequest.DONE) {
         if (request.status === 200) {
           var response = JSON.parse(request.response);
+          if (response == null){
+            return ;
+          }
           response.key = key;
           response.label = label;
           app.updateForecastCard(response);
@@ -150,4 +161,72 @@
     });
   };
 
+  var injectedForecast = {
+    key: 'newyork',
+    label: 'New York, NY',
+    currently: {
+      time: 1453489481,
+      summary: 'Clear',
+      icon: 'partly-cloudy-day',
+      temperature: 52.74,
+      apparentTemperature: 74.34,
+      precipProbability: 0.20,
+      humidity: 0.77,
+      windBearing: 125,
+      windSpeed: 1.52
+    },
+    daily: {
+      data: [
+        {icon: 'clear-day', temperatureMax: 55, temperatureMin: 34},
+        {icon: 'rain', temperatureMax: 55, temperatureMin: 34},
+        {icon: 'snow', temperatureMax: 55, temperatureMin: 34},
+        {icon: 'sleet', temperatureMax: 55, temperatureMin: 34},
+        {icon: 'fog', temperatureMax: 55, temperatureMin: 34},
+        {icon: 'wind', temperatureMax: 55, temperatureMin: 34},
+        {icon: 'partly-cloudy-day', temperatureMax: 55, temperatureMin: 34}
+      ]
+    }
+  };
+
+
+  app.checkForStoredPreferences = function() {
+    for (e in app.selectedCities) {
+      app.getForecast(e.key, e.value)
+    }
+    // app.getForecast() 
+  };
+
+  window.addEventListener('DOMContentLoaded', (event) => {
+      window.localforage.getItem('selectedCities').then ( data => {
+          if (data  && data[0].key != undefined) {
+              app.selectedCities = data;
+              app.selectedCities.forEach( function (city){
+                app.getForecast(city.key, city.label);
+              })
+          } else {
+            app.updateForecastCard(injectedForecast);
+            app.selectedCities = [{
+              key: injectedForecast.key,
+              label: injectedForecast.label
+            }]
+            console.log("The selected Cities are ", app.selectedCities);
+            app.storeUserPreferences();
+          }
+        }
+      ).catch( err =>  app.selectedCities = [] )
+        
+  });  
+
+  // if ('serviceWorker' in navigator){
+  //   navigator.serviceWorker.register('/service-worker.js')
+  //   .then(  function (registration){
+  //     console.log("The service worker is registered", registration);
+  //   }).catch(
+  //     function(error){
+  //       console.log("The service worker is failed", error);
+  //     }
+  //   )
+  // }
+
 })();
+
